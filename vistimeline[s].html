@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+	<title>Timeline</title>
+	<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+	<script type="text/javascript" src="https://unpkg.com/vis-timeline@latest/standalone/umd/vis-timeline-graph2d.min.js"></script>
+	<link href="https://unpkg.com/vis-timeline@latest/styles/vis-timeline-graph2d.min.css" rel="stylesheet" type="text/css" />
+	<style type="text/css">
+		body, html {
+		  font-family: arial, sans-serif;
+		  font-size: 10pt;
+		}
+		#visualization {
+			border: 1px solid lightgray;
+		}
+	</style>
+</head>
+<body>
+	<div id="visualization"></div>
+	
+	<script type="text/javascript">
+	
+		var container = document.getElementById('visualization');
+		var options = {
+			stack: true,
+			//editable: true,
+		};
+		var timeline = new vis.Timeline(container, null, options);
+		
+		timeline.on('select', function (selection) {
+			if(selection.items.length > 0){
+				grist.setCursorPos({rowId: selection.items[0]});
+			}
+			// console.log("QWE:", selection.items);
+		});
+				
+		grist.ready({
+			columns: [
+				{ name: "content", title: "Content", optional: false, description: "Some text", allowMultiple: false },
+				{ name: "start", title: "Start", optional: false, type: "Date", description: "Some text", allowMultiple: false },
+				{ name: "end", title: "End", optional: true, type: "Date", description: "Some text", allowMultiple: false },
+				{ name: "group", title: "Group", optional: true, description: "Some text", allowMultiple: false },
+			], 
+			requiredAccess: 'read table',
+			allowSelectBy: true
+		});
+		
+		grist.onRecords(function (records, mappings) {
+			const items = grist.mapColumnNames(records);
+			const groups = Array.from(new Set(items.map(item => item.group))).map((group, index) => ({id: index, content: group}));
+			
+			items.forEach(item => {
+				const helper = groups.find(g => g.content === item.group);
+				if (helper) {
+					item.group = helper.id; // replace the group name with the ID from helperList
+				}
+			});
+			
+			var items_dataset = new vis.DataSet(items);
+			var groups_dataset = new vis.DataSet(groups);
+			
+			// log changes to the console
+			//items_dataset.on('*', function (event, properties) {
+			//	console.log(event, properties.items);
+			//});
+			
+			timeline.setItems(items_dataset);
+			timeline.setGroups(groups_dataset);
+			timeline.fit();
+		});
+		
+	</script>
+
+</body>
+</html>
